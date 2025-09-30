@@ -79,8 +79,13 @@ function funcError(error) {
 
   div.setAttribute('data-qa', 'notification');
   div.classList.add('error');
-  div.textContent = error.message || error;
 
+  const text =
+    typeof error === 'string'
+      ? error
+      : (error && error.message) || String(error);
+
+  div.textContent = text;
   document.body.appendChild(div);
 }
 
