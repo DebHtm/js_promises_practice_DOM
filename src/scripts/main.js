@@ -5,32 +5,47 @@ document.addEventListener('contextmenu', (e) => {
 });
 
 const firstPromise = new Promise((resolve, reject) => {
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-      resolve('First promise was resolved on a left click in the document');
-    }
-  });
+  let settled = false;
 
-  setTimeout(() => {
-    reject(new Error('First promise was rejected in 3 seconds if not clicked'));
+  const handler = (e) => {
+    if (e.button === 0 && !settled) {
+      settled = true;
+      clearTimeout(timeoutId);
+      document.removeEventListener('mousedown', handler);
+      resolve('First promise was resolved');
+    }
+  };
+
+  document.addEventListener('mousedown', handler);
+
+  const timeoutId = setTimeout(() => {
+    if (!settled) {
+      settled = true;
+      document.removeEventListener('mousedown', handler);
+      reject(new Error('First promise was rejected'));
+    }
   }, 3000);
 });
 
 const secondPromise = new Promise((resolve, reject) => {
-  document.addEventListener('mousedown', (e) => {
-    if (e.button === 0) {
-      resolve('Second promise was resolved');
-    } else if (e.button === 2) {
+  let settled = false;
+  const handler = (e) => {
+    if (!settled && (e.button === 0 || e.button === 2)) {
+      settled = true;
+      document.removeEventListener('mousedown', handler);
       resolve('Second promise was resolved');
     }
-  });
+  };
+
+  document.addEventListener('mousedown', handler);
 });
 
 const thirdPromise = new Promise((resolve) => {
+  let settled = false;
   let leftClicked = false;
   let rightClicked = false;
 
-  document.addEventListener('mousedown', (e) => {
+  const handler = (e) => {
     if (e.button === 0) {
       leftClicked = true;
     }
@@ -39,12 +54,14 @@ const thirdPromise = new Promise((resolve) => {
       rightClicked = true;
     }
 
-    if (leftClicked && rightClicked) {
-      resolve(
-        `Third promise was resolved only after both left and right clicks happened`,
-      );
+    if (!settled && leftClicked && rightClicked) {
+      settled = true;
+      document.removeEventListener('mousedown', handler);
+      resolve('Third promise was resolved');
     }
-  });
+  };
+
+  document.addEventListener('mousedown', handler);
 });
 
 function funcSuccess(message) {
@@ -62,11 +79,11 @@ function funcError(error) {
 
   div.setAttribute('data-qa', 'notification');
   div.classList.add('error');
-  div.textContent = error.message;
+  div.textContent = error.message || error;
 
   document.body.appendChild(div);
 }
 
 firstPromise.then(funcSuccess).catch(funcError);
-secondPromise.then(funcSuccess);
+secondPromise.then(funcSuccess).catch(funcError);
 thirdPromise.then(funcSuccess).catch(funcError);
